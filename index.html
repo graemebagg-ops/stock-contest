@@ -345,27 +345,28 @@
         // STOCK PICKING FUNCTIONS
         async function fetchStockPrice(ticker) {
             try {
-                // For OTC stocks, try Yahoo Finance quote endpoint
+                // For OTC stocks, use AllOrigins proxy with Yahoo Finance
                 if (ticker === 'FMCC' || ticker === 'FNMA') {
-                    console.log(`${ticker} - Trying Yahoo Finance quote endpoint...`);
+                    console.log(`${ticker} - Trying Yahoo Finance via AllOrigins proxy...`);
                     try {
-                        const yahooUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=price`;
-                        const yahooResponse = await fetch(yahooUrl);
+                        const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
+                        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`;
+                        const yahooResponse = await fetch(proxyUrl);
                         const yahooData = await yahooResponse.json();
                         
-                        console.log(`${ticker} Yahoo quote response:`, yahooData);
+                        console.log(`${ticker} Yahoo (AllOrigins) response:`, yahooData);
                         
-                        if (yahooData.quoteSummary && yahooData.quoteSummary.result && yahooData.quoteSummary.result[0]) {
-                            const priceData = yahooData.quoteSummary.result[0].price;
-                            const price = priceData.regularMarketPrice?.raw || priceData.regularMarketPrice;
-                            console.log(`${ticker} Yahoo quote success:`, price);
+                        if (yahooData.chart && yahooData.chart.result && yahooData.chart.result[0] && yahooData.chart.result[0].meta) {
+                            const quote = yahooData.chart.result[0].meta;
+                            const price = quote.regularMarketPrice;
+                            console.log(`${ticker} Yahoo success:`, price);
                             return {
                                 price: price,
                                 success: true
                             };
                         }
                     } catch (yahooError) {
-                        console.log(`${ticker} Yahoo quote failed:`, yahooError);
+                        console.log(`${ticker} Yahoo AllOrigins failed:`, yahooError);
                     }
                 }
                 
