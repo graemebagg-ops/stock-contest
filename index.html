@@ -412,13 +412,18 @@
                 const promises = contestPicks.map(pick => fetchStockPrice(pick.ticker));
                 const results = await Promise.all(promises);
 
+                console.log('All results:', results);
+
                 contestPicks.forEach((pick, index) => {
                     stockData[pick.ticker] = results[index];
+                    console.log(`Stored ${pick.ticker}:`, stockData[pick.ticker]);
                 });
 
                 const enrichedPicks = contestPicks.map(pick => {
                     const current = stockData[pick.ticker];
-                    if (current && current.success && current.price !== null) {
+                    console.log(`Processing ${pick.ticker}:`, current);
+                    
+                    if (current && current.success && current.price !== null && current.price !== undefined) {
                         let returnDollar, returnPercent;
                         
                         if (pick.position === "short") {
@@ -429,6 +434,8 @@
                             returnPercent = (returnDollar / pick.entryPrice) * 100;
                         }
                         
+                        console.log(`${pick.ticker} calculated return: ${returnPercent}%`);
+                        
                         return {
                             ...pick,
                             currentPrice: current.price,
@@ -437,9 +444,11 @@
                             success: true
                         };
                     }
+                    console.log(`${pick.ticker} failed validation`);
                     return { ...pick, success: false };
                 }).sort((a, b) => (b.returnPercent || -Infinity) - (a.returnPercent || -Infinity));
 
+                console.log('Enriched picks:', enrichedPicks);
                 renderStockTable(enrichedPicks);
                 document.getElementById('stockLastUpdate').textContent = new Date().toLocaleTimeString();
 
