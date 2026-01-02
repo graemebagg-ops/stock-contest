@@ -345,14 +345,17 @@
         // STOCK PICKING FUNCTIONS
         async function fetchStockPrice(ticker) {
             try {
-                // For OTC stocks (FMCC, FNMA), try Yahoo Finance first
+                // For OTC stocks (FMCC, FNMA), use CORS proxy with Yahoo Finance
                 if (ticker === 'FMCC' || ticker === 'FNMA') {
-                    console.log(`${ticker} - Trying Yahoo Finance for OTC...`);
+                    console.log(`${ticker} - Trying Yahoo Finance via CORS proxy...`);
                     try {
-                        const yahooResponse = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
+                        // Use a CORS proxy to access Yahoo Finance
+                        const proxyUrl = 'https://corsproxy.io/?';
+                        const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
+                        const yahooResponse = await fetch(proxyUrl + encodeURIComponent(yahooUrl));
                         const yahooData = await yahooResponse.json();
                         
-                        console.log(`${ticker} Yahoo response:`, yahooData);
+                        console.log(`${ticker} Yahoo (via proxy) response:`, yahooData);
                         
                         if (yahooData.chart && yahooData.chart.result && yahooData.chart.result[0] && yahooData.chart.result[0].meta) {
                             const quote = yahooData.chart.result[0].meta;
@@ -364,26 +367,11 @@
                             };
                         }
                     } catch (yahooError) {
-                        console.log(`${ticker} Yahoo failed, trying Alpha Vantage...`, yahooError);
-                    }
-                    
-                    // If Yahoo fails, try Alpha Vantage
-                    const avResponse = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${ALPHA_VANTAGE_API_KEY}`);
-                    const avData = await avResponse.json();
-                    
-                    console.log(`${ticker} Alpha Vantage response:`, avData);
-                    
-                    if (avData['Global Quote'] && avData['Global Quote']['05. price']) {
-                        const price = parseFloat(avData['Global Quote']['05. price']);
-                        console.log(`${ticker} Alpha Vantage success:`, price);
-                        return {
-                            price: price,
-                            success: true
-                        };
+                        console.log(`${ticker} Yahoo proxy failed:`, yahooError);
                     }
                 }
                 
-                // Try Finnhub for all other stocks
+                // Try Finnhub for all stocks (including as fallback for OTC)
                 const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_API_KEY}`);
                 const data = await response.json();
                 
