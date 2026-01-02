@@ -335,37 +335,29 @@
             { player: "Stroker", predictedChange: 0.0 }
         ];
 
+        // Finnhub API key
+        const FINNHUB_API_KEY = 'd5bun51r01qsbmghe8c0d5bun51r01qsbmghe8cg';
+
         let stockData = {};
 
         // STOCK PICKING FUNCTIONS
         async function fetchStockPrice(ticker) {
             try {
-                // Use a CORS proxy to avoid blocking
-                const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
+                const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_API_KEY}`);
                 const data = await response.json();
                 
-                if (data.chart.result && data.chart.result[0]) {
-                    const quote = data.chart.result[0].meta;
+                if (data && data.c && data.c > 0) {
                     return {
-                        price: quote.regularMarketPrice,
+                        price: data.c, // current price
                         success: true
                     };
                 }
-                throw new Error('Invalid response');
+                throw new Error('Invalid response from Finnhub');
             } catch (error) {
                 console.error(`Error fetching ${ticker}:`, error);
-                // Fallback: use mock prices for demo
-                const mockPrices = {
-                    'FMCC': 11.25,
-                    'CSAN': 4.12,
-                    'WULF': 10.85,
-                    'ASST': 0.692,
-                    'TSLA': 425.30,
-                    'FNMA': 10.95
-                };
                 return { 
-                    price: mockPrices[ticker] || null, 
-                    success: mockPrices[ticker] ? true : false 
+                    price: null, 
+                    success: false 
                 };
             }
         }
@@ -458,23 +450,21 @@
         // QQQ PREDICTION FUNCTIONS
         async function fetchQQQPrice() {
             try {
-                const response = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/QQQ?interval=1d&range=1d');
+                const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=QQQ&token=${FINNHUB_API_KEY}`);
                 const data = await response.json();
                 
-                if (data.chart.result && data.chart.result[0]) {
-                    const quote = data.chart.result[0].meta;
+                if (data && data.c && data.c > 0) {
                     return {
-                        price: quote.regularMarketPrice,
+                        price: data.c, // current price
                         success: true
                     };
                 }
-                throw new Error('Invalid response');
+                throw new Error('Invalid response from Finnhub');
             } catch (error) {
                 console.error('Error fetching QQQ:', error);
-                // Fallback: use mock price for demo
                 return { 
-                    price: 605.50, 
-                    success: true
+                    price: null, 
+                    success: false
                 };
             }
         }
