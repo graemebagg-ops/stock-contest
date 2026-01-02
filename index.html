@@ -343,21 +343,39 @@
         // STOCK PICKING FUNCTIONS
         async function fetchStockPrice(ticker) {
             try {
+                // Try Finnhub first
                 const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_API_KEY}`);
                 const data = await response.json();
                 
+                console.log(`${ticker} response:`, data);
+                
                 if (data && data.c && data.c > 0) {
                     return {
-                        price: data.c, // current price
+                        price: data.c,
                         success: true
                     };
                 }
-                throw new Error('Invalid response from Finnhub');
+                
+                // If Finnhub fails, try Yahoo Finance as backup
+                const yahooResponse = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
+                const yahooData = await yahooResponse.json();
+                
+                if (yahooData.chart && yahooData.chart.result && yahooData.chart.result[0]) {
+                    const quote = yahooData.chart.result[0].meta;
+                    console.log(`${ticker} Yahoo fallback success:`, quote.regularMarketPrice);
+                    return {
+                        price: quote.regularMarketPrice,
+                        success: true
+                    };
+                }
+                
+                throw new Error('Both APIs failed');
             } catch (error) {
                 console.error(`Error fetching ${ticker}:`, error);
                 return { 
                     price: null, 
-                    success: false 
+                    success: false,
+                    error: error.message
                 };
             }
         }
@@ -405,8 +423,14 @@
 
             } catch (error) {
                 console.error('Stock refresh error:', error);
+                // Even if there's an error, try to render what we have
+                const enrichedPicks = contestPicks.map(pick => ({
+                    ...pick,
+                    success: false
+                }));
+                renderStockTable(enrichedPicks);
                 document.getElementById('stockError').innerHTML = 
-                    `<div class="error">Error loading data: ${error.message}</div>`;
+                    `<div class="error">Some stocks failed to load. Check console for details.</div>`;
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Refresh Prices';
