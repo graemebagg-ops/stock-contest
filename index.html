@@ -345,9 +345,29 @@
         // STOCK PICKING FUNCTIONS
         async function fetchStockPrice(ticker) {
             try {
-                // OTC stocks - go straight to Alpha Vantage
+                // For OTC stocks (FMCC, FNMA), try Yahoo Finance first
                 if (ticker === 'FMCC' || ticker === 'FNMA') {
-                    console.log(`${ticker} - Using Alpha Vantage (OTC stock)...`);
+                    console.log(`${ticker} - Trying Yahoo Finance for OTC...`);
+                    try {
+                        const yahooResponse = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
+                        const yahooData = await yahooResponse.json();
+                        
+                        console.log(`${ticker} Yahoo response:`, yahooData);
+                        
+                        if (yahooData.chart && yahooData.chart.result && yahooData.chart.result[0] && yahooData.chart.result[0].meta) {
+                            const quote = yahooData.chart.result[0].meta;
+                            const price = quote.regularMarketPrice;
+                            console.log(`${ticker} Yahoo success:`, price);
+                            return {
+                                price: price,
+                                success: true
+                            };
+                        }
+                    } catch (yahooError) {
+                        console.log(`${ticker} Yahoo failed, trying Alpha Vantage...`, yahooError);
+                    }
+                    
+                    // If Yahoo fails, try Alpha Vantage
                     const avResponse = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${ALPHA_VANTAGE_API_KEY}`);
                     const avData = await avResponse.json();
                     
@@ -372,35 +392,6 @@
                 if (data && data.c && data.c > 0) {
                     return {
                         price: data.c,
-                        success: true
-                    };
-                }
-                
-                // If Finnhub fails, try Alpha Vantage
-                console.log(`${ticker} - Trying Alpha Vantage...`);
-                const avResponse = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${ALPHA_VANTAGE_API_KEY}`);
-                const avData = await avResponse.json();
-                
-                console.log(`${ticker} Alpha Vantage response:`, avData);
-                
-                if (avData['Global Quote'] && avData['Global Quote']['05. price']) {
-                    const price = parseFloat(avData['Global Quote']['05. price']);
-                    console.log(`${ticker} Alpha Vantage success:`, price);
-                    return {
-                        price: price,
-                        success: true
-                    };
-                }
-                
-                // Last resort: try Yahoo Finance
-                const yahooResponse = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
-                const yahooData = await yahooResponse.json();
-                
-                if (yahooData.chart && yahooData.chart.result && yahooData.chart.result[0]) {
-                    const quote = yahooData.chart.result[0].meta;
-                    console.log(`${ticker} Yahoo fallback success:`, quote.regularMarketPrice);
-                    return {
-                        price: quote.regularMarketPrice,
                         success: true
                     };
                 }
