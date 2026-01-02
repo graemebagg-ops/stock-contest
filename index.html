@@ -345,7 +345,25 @@
         // STOCK PICKING FUNCTIONS
         async function fetchStockPrice(ticker) {
             try {
-                // Try Finnhub first
+                // OTC stocks - go straight to Alpha Vantage
+                if (ticker === 'FMCC' || ticker === 'FNMA') {
+                    console.log(`${ticker} - Using Alpha Vantage (OTC stock)...`);
+                    const avResponse = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${ALPHA_VANTAGE_API_KEY}`);
+                    const avData = await avResponse.json();
+                    
+                    console.log(`${ticker} Alpha Vantage response:`, avData);
+                    
+                    if (avData['Global Quote'] && avData['Global Quote']['05. price']) {
+                        const price = parseFloat(avData['Global Quote']['05. price']);
+                        console.log(`${ticker} Alpha Vantage success:`, price);
+                        return {
+                            price: price,
+                            success: true
+                        };
+                    }
+                }
+                
+                // Try Finnhub for all other stocks
                 const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_API_KEY}`);
                 const data = await response.json();
                 
@@ -358,7 +376,7 @@
                     };
                 }
                 
-                // If Finnhub fails, try Alpha Vantage (better for OTC)
+                // If Finnhub fails, try Alpha Vantage
                 console.log(`${ticker} - Trying Alpha Vantage...`);
                 const avResponse = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${ALPHA_VANTAGE_API_KEY}`);
                 const avData = await avResponse.json();
