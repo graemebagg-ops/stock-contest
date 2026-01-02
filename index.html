@@ -381,7 +381,11 @@
         }
 
         async function refreshStockData() {
-            const btn = document.querySelector('.contest-section:first-child .refresh-btn');
+            const btn = document.querySelectorAll('.refresh-btn')[0];
+            if (!btn) {
+                console.error('Could not find stock refresh button');
+                return;
+            }
             btn.disabled = true;
             btn.textContent = 'Refreshing...';
             document.getElementById('stockError').innerHTML = '';
@@ -494,7 +498,11 @@
         }
 
         async function refreshQQQData() {
-            const btn = document.querySelector('.qqq-section .refresh-btn');
+            const btn = document.querySelectorAll('.refresh-btn')[1];
+            if (!btn) {
+                console.error('Could not find QQQ refresh button');
+                return;
+            }
             btn.disabled = true;
             btn.textContent = 'Refreshing...';
             document.getElementById('qqqError').innerHTML = '';
