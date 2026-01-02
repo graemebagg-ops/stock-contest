@@ -337,6 +337,8 @@
 
         // Finnhub API key
         const FINNHUB_API_KEY = 'd5bun51r01qsbmghe8c0d5bun51r01qsbmghe8cg';
+        // Alpha Vantage API key (for OTC stocks)
+        const ALPHA_VANTAGE_API_KEY = 'RM3SRHM7QJC1HKG4';
 
         let stockData = {};
 
@@ -347,7 +349,7 @@
                 const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_API_KEY}`);
                 const data = await response.json();
                 
-                console.log(`${ticker} response:`, data);
+                console.log(`${ticker} Finnhub response:`, data);
                 
                 if (data && data.c && data.c > 0) {
                     return {
@@ -356,7 +358,23 @@
                     };
                 }
                 
-                // If Finnhub fails, try Yahoo Finance as backup
+                // If Finnhub fails, try Alpha Vantage (better for OTC)
+                console.log(`${ticker} - Trying Alpha Vantage...`);
+                const avResponse = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${ALPHA_VANTAGE_API_KEY}`);
+                const avData = await avResponse.json();
+                
+                console.log(`${ticker} Alpha Vantage response:`, avData);
+                
+                if (avData['Global Quote'] && avData['Global Quote']['05. price']) {
+                    const price = parseFloat(avData['Global Quote']['05. price']);
+                    console.log(`${ticker} Alpha Vantage success:`, price);
+                    return {
+                        price: price,
+                        success: true
+                    };
+                }
+                
+                // Last resort: try Yahoo Finance
                 const yahooResponse = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
                 const yahooData = await yahooResponse.json();
                 
@@ -369,7 +387,7 @@
                     };
                 }
                 
-                throw new Error('Both APIs failed');
+                throw new Error('All APIs failed');
             } catch (error) {
                 console.error(`Error fetching ${ticker}:`, error);
                 return { 
